@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Solo Exploration in R"
 output:
   pdf_document: default
   html_notebook: default
@@ -29,8 +29,6 @@ Create an RMarkdown file to answer the following questions.
 library(tidyverse)
 
 districts <- read_csv('../data/districts.csv')
-
-districts
 ```
 
 2.  Notice that the first row corresponds to the whole State of Tennessee. Remove this row and save the result back to districts.
@@ -55,63 +53,236 @@ districts %>%
 
 > 8 districts
 
-```{R}
+```{r}
 districts %>% 
   filter(alg_1 < 50 | eng_1 < 50) %>% 
-  count()
+  #count()
+  summarize(n())
 ```
 
-Which district has the lowest graduation rate?
+5.  Which district has the lowest graduation rate?
 
-Within the Mid Cumberland region, which district has the highest ACT composite?
+> Tenn School for Blind
 
-Create a histogram showing the distribution of graduation rates. What can you say about this distribution?
+```{r}
+districts %>%
+    filter(grad == min(grad, na.rm=TRUE))
+```
 
-Create a scatter plot to compare alg_1 proficiency rates to alg_2 rates. What do you notice? Facet this plot by region. Does anything stand out when you facet the plots?
+6.  Within the Mid Cumberland region, which district has the highest ACT composite?
 
-Create a bar chart showing the total enrollment by region. Which region has the highest total enrollment? Which has the smallest?
+> Williamson County
 
-When creating this bar chart you may have noticed that some districts have missing enrollment values. For how many districts is this the case?
+```{r}
+districts %>% 
+  filter(region == 'Mid Cumberland')  %>% 
+  filter(act_composite == max(act_composite, na.rm=TRUE))
+```
 
-What is the mean graduation rate across all districts? What might be wrong with using just the regular mean to assess average graduation rates?
+7.  Create a histogram showing the distribution of graduation rates. What can you say about this distribution?
 
-Redo the previous question but use a weighted average (weighted.mean) graduation across all districts, weighing by enrollment. How much does this change your answer? Can you explain using the data the reason for the big change from using the mean?
+> the majority of schools/districts have about a 90% graduation rate. There are a few outliers with much lower graduation numbers
 
-Create a boxplot showing graduation rates per region. Does anything stand out?
+```{r}
+# this works, but it's nicer to use pipes!
+#ggplot(districts, aes(x=grad)) +
+#  geom_histogram(binwidth=3)
 
-Find the weighted average of graduation rates by region using enrollment as weights. Compare the results you get for the weighted average to what you see from the boxplots.
+districts %>% 
+  ggplot(aes(x=grad)) +
+  geom_histogram(binwidth=3)
+```
 
-For many districts, values for alg_2 are lower than for alg_1. Create a histogram showing the distribution of differences (alg_1 - alg_2). Which school had the largest drop from alg_1 to alg_2? For what percentage of schools is it true that alg_2 is larger than alg_1? Is there a similar drop off for eng_2 and eng_3?
+8.  Create a scatter plot to compare alg_1 proficiency rates to alg_2 rates. What do you notice?
 
-You may have noticed that a lot of rows are missing values. Which district has the largest number of missing values? What do you notice about schools that have a lot of missing values?
+> there seems to be a linear relationship , I.e., the higher grades in alg_1 proficiency seem to indicate higher rates in alg_2 proficiency overall
 
-Find the correlation between graduation rate and all other variables. Create a horizontal bar chart showing these correlations. Make sure that your plot is ordered by correlation values. What do you notice from these correlations?
+```{r}
+districts %>% 
+  ggplot(aes(x=alg_1, y=alg_2)) +
+  geom_point() +
+  xlim(0,100) +
+  ylim(0,100)
+```
 
-Create a scatterplot for grad vs. suspended. Does what you see make sense given your answer from the previous part?
+8.  part 2 - Facet this plot by region. Does anything stand out when you facet the plots?
 
-Create a linear regression model using lm with target variable grad and predictor variable suspended. What R\^2 value does this model have? What is the interpretation of this number?
+> Upper Cumberland seems to stand out as being completely different from the rest.
 
-Add the regression line to your scatterplot using geom_smooth with method='lm'. How do you feel about the regression line after seeing it plotted on the scatterplot?
+```{r}
+districts %>% 
+  ggplot(aes(x=alg_1, y=alg_2)) +
+  facet_wrap(vars(region)) +
+  geom_point() +
+  xlim(0,100) +
+  ylim(0,100) 
+```
 
-Continued Exploration and Practice
+9.  Create a bar chart showing the total enrollment by region. Which region has the highest total enrollment? Which has the smallest?
 
-Read in the school-level testing data for 2014, available here. You might find the readxl library useful for this task. If you use this library, be sure to look at the na argument for the read_excel function.
+> Mid Cumberland has highest totla enrollment, Northwest has the smallest.
 
-How many schools have at least 20 percent of students below bsc for Algebra I? Which districts do these schools belong to?
+```{r}
+districts %>% 
+  ggplot(aes(y=region, weight=enrollment)) +
+  geom_bar()
+```
 
-How many schools have at least 20 percent of students below bsc for both Algebra I and English I?
+10. When creating this bar chart you may have noticed that some districts have missing enrollment values. For how many districts is this the case?
 
-Which grade has the highest pct_adv for Algebra I? Plot the average pct_adv per grade level as a bar chart. Make sure that the bars are ordered by grade level.
+> that is true for 4 districts
 
-Find the correlation between pct_adv for Algebra I and pct_adv for Algebra II by school. Create a scatterplot showing Algebra II scores vs. Algebra I scores by school.
+```{r}
+districts %>% 
+  filter(is.na(enrollment))
+```
 
-Find all schools in Rutherford County that have "High School" in their name. For these schools, create a chart (your choice) showing the differences in pct_below_bsc, pct_bsc, pct_prof, and pct_adv for Algebra I when looking across all subgroups and grades.
+11. What is the mean graduation rate across all districts? What might be wrong with using just the regular mean to assess average graduation rates?
 
-I claim that smaller schools do a better job preparing students for Algebra I standardized tests. Find the average number of valid tests (a proxy for the school size) for schools where the pct_prof_adv for Algebra I is greater than 95. Compare this to the average number of valid tests for all schools. In light of this result, how does my claim look?
+> mean graduation rate is 90.1%, problem with it is that it essentially captures most schools, centered around the peak. In other words, it essentially excludes the 7 schools with graduation rates less than 80%, in some cases much less. Furthermore, this does not account for how many kids are enrolled in each school
 
-I also claim that smaller schools do a worse job preparing students for Algebra I standardized tests. Find the average number of valid tests (a proxy for the school size) for schools where the pct_prof_adv for Algebra I is less than 25. Compare this to the average number of valid tests for all schools. In light of this result, how does my claim look now?
+```{r}
+districts %>% 
+  summarize(mean = mean(grad, na.rm=TRUE),
+            median = median(grad, na.rm=TRUE),
+            sd = sd(grad, na.rm=TRUE))
+```
 
-Create a scatterplot showing pct_prov_adv vs. valid_tests. Can you use this to explain the result for the previous two questions?
+```{r}
+districts %>% 
+  filter(grad < 80)
+```
+
+12. Redo the previous question but use a weighted average (weighted.mean) graduation across all districts, weighing by enrollment. How much does this change your answer? Can you explain using the data the reason for the big change from using the mean?
+
+> in order to calculate weighted mean I had to remove rows that had NA for graduate, OR for enrollment. The mean dropped by almost 3%. That is because of two of the districts in particular with large enrollment, Shelby County and Davidson County
+
+```{r}
+districts %>% 
+  drop_na(grad, enrollment) %>% 
+  summarize(w_mean = weighted.mean(grad, enrollment),
+            sd = sd(grad))
+```
+```{r}
+districts %>% 
+  filter(grad < 80) %>% 
+  summarize(sum(enrollment, na.rm=TRUE))
+```
+> commenting the filter line, I get the total number of enrolled students over all districts, 943673. The regions that had less than 80% in particular have 198855 enrolled, so roughly 21% of all enrolled!
+
+13. Create a boxplot showing graduation rates per region. Does anything stand out?
+
+> Upper Cumberland, Southwest/Memphis, Northwest each have 1 outlier, Mid Cumberland has 2 (one particularly extreme as seen previously). On top of that, Southwest/Memphis in particular has a large distribution of graduation values
+
+```{r}
+districts %>% 
+  ggplot(aes(x=grad, y=region)) +
+  geom_boxplot() +
+  scale_x_continuous(breaks=seq(0,100,5))
+```
+14. Find the weighted average of graduation rates by region using enrollment as weights. Compare the results you get for the weighted average to what you see from the boxplots.
+
+> certain regions, but in particular Southwest/Memphis's outliers heavily influence the weighted mean
+
+```{r}
+districts %>% 
+  drop_na(grad, enrollment) %>% 
+  group_by(region) %>% 
+  summarize(w_mean = weighted.mean(grad, enrollment),
+            sd = sd(grad))
+```
+
+15. For many districts, values for alg_2 are lower than for alg_1. Create a histogram showing the distribution of differences (alg_1 - alg_2).
+
+```{r}
+districts %>% 
+  mutate(alg_diff=alg_1 - alg_2) %>% 
+  drop_na(alg_diff) %>% 
+  ggplot(aes(x=alg_diff)) +
+  geom_histogram(binwidth=5)
+```
+15. cont - Which school had the largest drop from alg_1 to alg_2? 
+
+> Pickett County
+
+```{r}
+districts %>% 
+  mutate(alg_diff=alg_1 - alg_2) %>% 
+  filter(alg_diff == max(alg_diff, na.rm=TRUE))
+```
+15. cont - For what percentage of schools is it true that alg_2 is larger than alg_1?
+
+> 18 schools (out of 145), so 12.4%
+
+```{r}
+districts %>% 
+  filter(alg_2 > alg_1)
+```
+15. cont - Is there a similar drop off for eng_2 and eng_3?
+
+> It's even worse! Only Bradford SSD has eng 3 higher than eng 2
+
+```{r}
+districts %>% 
+  filter(eng_3 > eng_2)
+```
+16. You may have noticed that a lot of rows are missing values. Which district has the largest number of missing values?
+
+> West Tenn School for Deaf has 15 missing values.
+
+```{r}
+count_na_func <- function(x) sum(is.na(x)) 
+
+districts %>% 
+  # note the 1 in apply is to do over rows (2 would be columns)
+  mutate(count_na = apply(., 1, count_na_func)) %>% 
+  filter(count_na == max(count_na))
+```
+16. cont - What do you notice about schools that have a lot of missing values?
+
+> first looked at how many schools have which data missing. Most schools (112) don't have any missing, and an additional 13 have only 1 or two values missing. From there, the next one has 6 missing and going up from there. I decided to inspect all schools with 6 or more values missing.
+
+> they include special district schools (for kids with special needs) and certain city schools
+
+```{r}
+districts %>% 
+  mutate(count_na = apply(., 1, count_na_func)) %>% 
+  group_by(count_na) %>% 
+  summarize(n())
+```
+```{r}
+districts %>% 
+  mutate(count_na = apply(., 1, count_na_func)) %>% 
+  filter(count_na >= 6)
+```
+
+17. Find the correlation between graduation rate and all other variables. Create a horizontal bar chart showing these correlations. Make sure that your plot is ordered by correlation values. What do you notice from these correlations?
+
+18. Create a scatterplot for grad vs. suspended. Does what you see make sense given your answer from the previous part?
+
+19. Create a linear regression model using lm with target variable grad and predictor variable suspended. What R\^2 value does this model have? What is the interpretation of this number?
+
+20. Add the regression line to your scatterplot using geom_smooth with method='lm'. How do you feel about the regression line after seeing it plotted on the scatterplot?
+
+### Continued Exploration and Practice
+
+21. Read in the school-level testing data for 2014, available here (<https://www.tn.gov/content/dam/tn/education/data/data_2014_school_base.xlsx>). You might find the readxl library useful for this task. If you use this library, be sure to look at the na argument for the read_excel function.
+
+22. How many schools have at least 20 percent of students below bsc for Algebra I? Which districts do these schools belong to?
+
+23. How many schools have at least 20 percent of students below bsc for both Algebra I and English I?
+
+24. Which grade has the highest pct_adv for Algebra I? Plot the average pct_adv per grade level as a bar chart. Make sure that the bars are ordered by grade level.
+
+25. Find the correlation between pct_adv for Algebra I and pct_adv for Algebra II by school. Create a scatterplot showing Algebra II scores vs. Algebra I scores by school.
+
+26. Find all schools in Rutherford County that have "High School" in their name. For these schools, create a chart (your choice) showing the differences in pct_below_bsc, pct_bsc, pct_prof, and pct_adv for Algebra I when looking across all subgroups and grades.
+
+27. I claim that smaller schools do a better job preparing students for Algebra I standardized tests. Find the average number of valid tests (a proxy for the school size) for schools where the pct_prof_adv for Algebra I is greater than 95. Compare this to the average number of valid tests for all schools. In light of this result, how does my claim look?
+
+28. I also claim that smaller schools do a worse job preparing students for Algebra I standardized tests. Find the average number of valid tests (a proxy for the school size) for schools where the pct_prof_adv for Algebra I is less than 25. Compare this to the average number of valid tests for all schools. In light of this result, how does my claim look now?
+
+29. Create a scatterplot showing pct_prov_adv vs. valid_tests. Can you use this to explain the result for the previous two questions?
 
 If you finish all of the above questions, continue to explore the two datasets and see what else interesting you can find.
 
