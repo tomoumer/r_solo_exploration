@@ -90,7 +90,7 @@ districts %>%
 
 districts %>% 
   ggplot(aes(x=grad)) +
-  geom_histogram(binwidth=3)
+  geom_histogram(binwidth=3, na.rm=TRUE)
 ```
 
 8.  Create a scatter plot to compare alg_1 proficiency rates to alg_2 rates. What do you notice?
@@ -100,7 +100,7 @@ districts %>%
 ```{r}
 districts %>% 
   ggplot(aes(x=alg_1, y=alg_2)) +
-  geom_point() +
+  geom_point(na.rm=TRUE) +
   xlim(0,100) +
   ylim(0,100)
 ```
@@ -113,7 +113,7 @@ districts %>%
 districts %>% 
   ggplot(aes(x=alg_1, y=alg_2)) +
   facet_wrap(vars(region)) +
-  geom_point() +
+  geom_point(na.rm=TRUE) +
   xlim(0,100) +
   ylim(0,100) 
 ```
@@ -177,7 +177,7 @@ districts %>%
 ```{r}
 districts %>% 
   ggplot(aes(x=grad, y=region)) +
-  geom_boxplot() +
+  geom_boxplot(na.rm=TRUE) +
   scale_x_continuous(breaks=seq(0,100,5))
 ```
 14. Find the weighted average of graduation rates by region using enrollment as weights. Compare the results you get for the weighted average to what you see from the boxplots.
@@ -255,14 +255,48 @@ districts %>%
   mutate(count_na = apply(., 1, count_na_func)) %>% 
   filter(count_na >= 6)
 ```
-
 17. Find the correlation between graduation rate and all other variables. Create a horizontal bar chart showing these correlations. Make sure that your plot is ordered by correlation values. What do you notice from these correlations?
+
+```{r}
+districts %>% 
+  select(where(is.numeric)) %>% 
+  cor(x=., y=districts$grad, use='complete.obs') %>% 
+```
+
 
 18. Create a scatterplot for grad vs. suspended. Does what you see make sense given your answer from the previous part?
 
+> not really; I mean, there could perhaps be a slight downwards trend with more suspensions, but only after about 5%
+
+```{r}
+districts %>% 
+  ggplot(aes(x=suspended, y=grad)) +
+  geom_point(na.rm=TRUE)
+```
+
+
 19. Create a linear regression model using lm with target variable grad and predictor variable suspended. What R\^2 value does this model have? What is the interpretation of this number?
 
+> the R squared is 0.079, very close to 0, so the linear fit does not match up to the data well
+
+```{r}
+simple_linear <- lm(grad ~ suspended, data = districts)
+
+summary(simple_linear)
+```
+
+
 20. Add the regression line to your scatterplot using geom_smooth with method='lm'. How do you feel about the regression line after seeing it plotted on the scatterplot?
+
+> not the worst line I've seen, but the residuals are increasing
+
+```{r}
+districts %>% 
+  ggplot(aes(x=suspended, y=grad)) +
+  geom_point(na.rm=TRUE) +
+  geom_smooth(method ='lm', na.rm=TRUE)
+```
+
 
 ### Continued Exploration and Practice
 
