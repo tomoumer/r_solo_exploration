@@ -213,9 +213,9 @@ districts %>%
 ```{r}
 districts %>% 
   mutate(alg_diff=alg_1 - alg_2) %>% 
-  drop_na(alg_diff) %>% 
-  ggplot(aes(x=alg_diff)) +
-  geom_histogram(binwidth=5)
+  ggplot(aes(x=alg_diff, fill=region)) +
+  geom_histogram(binwidth=5, na.rm=TRUE) +
+  facet_wrap(~region)
 ```
 15. cont - Which school had the largest drop from alg_1 to alg_2? 
 
@@ -224,23 +224,37 @@ districts %>%
 ```{r}
 districts %>% 
   mutate(alg_diff=alg_1 - alg_2) %>% 
-  filter(alg_diff == max(alg_diff, na.rm=TRUE))
+  filter(alg_diff == max(alg_diff, na.rm=TRUE)) %>% 
+  # alternatively to filter
+  # slice_max(alg_dif, n = 1)
+  select(system_name, alg_diff, alg_1, alg_2)
 ```
 15. cont - For what percentage of schools is it true that alg_2 is larger than alg_1?
 
-> 18 schools (out of 145), so 12.4%
+> 18 schools (out of 145), so 12.4% (i got this simply by filtering where alg_2 > alg_1); or 15.3% if removed NA
 
 ```{r}
 districts %>% 
-  filter(alg_2 > alg_1)
+  mutate(alg_diff=alg_1 - alg_2) %>% 
+  summarize(mean(alg_diff<0, na.rm=TRUE))
 ```
 15. cont - Is there a similar drop off for eng_2 and eng_3?
 
-> It's even worse! Only Bradford SSD has eng 3 higher than eng 2
+> It's even worse! Only Bradford SSD has eng 3 higher than eng 2, similar distributions
 
 ```{r}
+#districts %>% 
+#  filter(eng_3 > eng_2)
+
+#districts %>% 
+#  mutate(eng_diff=eng_2 - eng_3) %>% 
+#  summarize(mean(eng_diff<0, na.rm=TRUE))
+
 districts %>% 
-  filter(eng_3 > eng_2)
+  mutate(eng_diff=eng_2 - eng_3) %>% 
+  ggplot(aes(x=eng_diff, fill=region)) +
+  geom_histogram(binwidth=5, na.rm=TRUE) +
+  facet_wrap(~region)
 ```
 16. You may have noticed that a lot of rows are missing values. Which district has the largest number of missing values?
 
@@ -253,6 +267,12 @@ districts %>%
   # note the 1 in apply is to do over rows (2 would be columns)
   mutate(count_na = apply(., 1, count_na_func)) %>% 
   filter(count_na == max(count_na))
+
+# alternative
+#districts %>% 
+#  mutate(nancount = rowSums(is.na(.))) %>% 
+#  filter(nancount >= 5) %>% 
+#  arrange(desc(nancount))
 ```
 16. cont - What do you notice about schools that have a lot of missing values?
 
@@ -281,7 +301,6 @@ districts %>%
   cor(x=., y=districts$grad, use='complete.obs') %>% 
   as.data.frame() %>% 
   rownames_to_column(var = 'variables') %>% 
-  #arrange(V1) %>% 
   ggplot(aes(y=reorder(variables, V1), weight=V1)) +
   geom_bar() 
 ```
@@ -293,19 +312,32 @@ districts %>%
 
 ```{r}
 districts %>% 
-  ggplot(aes(x=suspended, y=grad)) +
+  ggplot(aes(x=suspended, y=grad, color=region)) +
   geom_point(na.rm=TRUE)
 ```
 
 
 19. Create a linear regression model using lm with target variable grad and predictor variable suspended. What R\^2 value does this model have? What is the interpretation of this number?
 
-> the R squared is 0.079, very close to 0, so the linear fit does not match up to the data well
+> the R squared is 0.0722, very close to 0, so the linear fit does not match up to the data well, lot of variability
+> anova also tells us that the P-value is low, 0.001262 and therefore it's better to predict with one variable than with none (with constant), so it's statistically significant
 
 ```{r}
 simple_linear <- lm(grad ~ suspended, data = districts)
 
+anova(simple_linear)
 summary(simple_linear)
+```
+
+note: there is one extreme value outlier (low grad rate AND low suspension rate ), TN school for blind. If we remove it, the numbers improve significantly, and the coefficients are different.
+
+```{r}
+grad_lm <- districts %>% 
+  filter(grad > 25) %>% 
+  lm(grad ~ suspended, data = .)
+
+anova(grad_lm)
+summary(grad_lm)
 ```
 
 
@@ -346,14 +378,39 @@ school_testing %>%
 
 23. How many schools have at least 20 percent of students below bsc for both Algebra I and English I?
 
+> same doubts as above, the result now being 303 shools. The way I did it was to first filter down to all schools with Algebra below 20. And then use those schools, filtering further by English below 20
+
 ```{r}
-school_testing %>% 
+school_algebra_below20 <- school_testing %>% 
   filter(subject == 'Algebra I' & grade == 'All Grades' & subgroup == 'All Students') %>% 
+  filter(pct_bsc_and_below >= 20) %>% 
+  select(school_name)
+```
+
+```{r}
+school_algebra_below20 %>% 
+  left_join(school_testing, by='school_name') %>% 
+  filter(subject == 'English I' & grade == 'All Grades' & subgroup == 'All Students') %>% 
   filter(pct_bsc_and_below >= 20)
 ```
 
 
 24. Which grade has the highest pct_adv for Algebra I? Plot the average pct_adv per grade level as a bar chart. Make sure that the bars are ordered by grade level.
+
+```{r}
+school_testing %>% head()
+```
+
+
+```{r}
+school_testing %>% 
+  filter(subject == 'Algebra I') %>%
+  filter(pct_adv != '*' & pct_adv != '**') %>% 
+  #group_by(grade) %>% 
+  summarize(sum(pct_adv, na.rm=TRUE))
+  #slice_max(pct_adv, n=1)
+```
+
 
 25. Find the correlation between pct_adv for Algebra I and pct_adv for Algebra II by school. Create a scatterplot showing Algebra II scores vs. Algebra I scores by school.
 
