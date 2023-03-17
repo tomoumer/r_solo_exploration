@@ -7,37 +7,23 @@ output:
 
 ## Tidyverse Solo Exercise
 
-In this project, you'll practice working with data using the tidyverse libraries. You'll be working with data on each of 145 school districts and the State of Tennessee. This data contains, for the 2014-2015 school year:
+The data for this exercise is on each of 145 school districts and the State of Tennessee for the 2014-2015 school year.
 
--   Proficiency rates on state tests
--   Student demographics
--   Chronic absenteeism
--   Discipline (suspension, expulsion) rates
--   High school graduation, dropout rates
--   Average ACT composite scores
--   A region in Tennessee
+Importing the needed libraries:
 
-
-```{r}
+```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(scales)
 ```
 
-
-Create an RMarkdown file to answer the following questions.
-
-> done!
-
 1.  Read in districts.csv into a tibble named districts. How many rows and columns does it contain?
 
-> 146 rows, 27 columns
-
-```{R}
+```{R, warning=FALSE, message=FALSE}
 districts <- read_csv('../data/districts.csv')
 
 # some ways to access that info
-nrow(districts)
-ncol(districts)
+paste('Number of Rows:', nrow(districts))
+paste('Number of Columns:', ncol(districts))
 ```
 
 2.  Notice that the first row corresponds to the whole State of Tennessee. Remove this row and save the result back to districts.
@@ -55,8 +41,12 @@ districts <- districts %>%
 ```{R}
 districts %>% 
   filter(alg_1 >= 80 & eng_1 >=80) %>% 
-  #count()
   nrow()
+
+  # two alternatives to nrow, both return a tibble:
+  # count() 
+  # or
+  # summarize(n())
 ```
 
 4.  How many districts have a proficiency rate less than 50% for either alg_1 or eng_1?
@@ -66,8 +56,6 @@ districts %>%
 ```{r}
 districts %>% 
   filter(alg_1 < 50 | eng_1 < 50) %>% 
-  #count()
-  #summarize(n())
   nrow()
 ```
 
@@ -77,8 +65,9 @@ districts %>%
 
 ```{r}
 districts %>%
-    #filter(grad == min(grad, na.rm=TRUE))
     slice_min(grad, n=1) %>% 
+    # alternative to slice_min:
+    # filter(grad == min(grad, na.rm=TRUE)) %>%
     select(system_name)
 ```
 
@@ -89,8 +78,9 @@ districts %>%
 ```{r}
 districts %>% 
   filter(region == 'Mid Cumberland')  %>% 
-  #filter(act_composite == max(act_composite, na.rm=TRUE))
   slice_max(act_composite, n=1)
+  # alternative to slice_max
+  # filter(act_composite == max(act_composite, na.rm=TRUE))
 ```
 
 7.  Create a histogram showing the distribution of graduation rates. What can you say about this distribution?
@@ -98,7 +88,7 @@ districts %>%
 > the majority of schools/districts have about a 90% graduation rate. There are a few outliers with much lower graduation numbers
 
 ```{r}
-# this works, but it's nicer to use pipes!
+# this works, but it's nicer to use pipes as below!
 #ggplot(districts, aes(x=grad)) +
 #  geom_histogram(binwidth=3)
 
@@ -140,8 +130,8 @@ districts %>%
 districts %>% 
   ggplot(aes(y=region, weight=enrollment, fill=region)) +
   geom_bar() +
+  # this last command below is from scales library, to get rid of scientific notation
   scale_x_continuous(labels = comma)
-  # this last one is from scales library, to get rid of scientific notation
 ```
 
 10. When creating this bar chart you may have noticed that some districts have missing enrollment values. For how many districts is this the case?
@@ -178,13 +168,13 @@ districts %>%
   drop_na(grad, enrollment) %>% 
   summarize(w_mean = weighted.mean(grad, enrollment),
             sd = sd(grad))
-```
-```{r}
+
 districts %>% 
   filter(grad < 80) %>% 
   summarize(sum(enrollment, na.rm=TRUE))
 ```
-> commenting the filter line, I get the total number of enrolled students over all districts, 943673. The regions that had less than 80% in particular have 198855 enrolled, so roughly 21% of all enrolled!
+
+> commenting out the filter above, I get the total number of enrolled students over all districts, 943673. The regions that had less than 80% in particular have 198855 enrolled, so roughly 21% of all enrolled!
 
 13. Create a boxplot showing graduation rates per region. Does anything stand out?
 
@@ -196,6 +186,7 @@ districts %>%
   geom_boxplot(na.rm=TRUE) +
   scale_x_continuous(breaks=seq(0,100,5))
 ```
+
 14. Find the weighted average of graduation rates by region using enrollment as weights. Compare the results you get for the weighted average to what you see from the boxplots.
 
 > certain regions, but in particular Southwest/Memphis's outliers heavily influence the weighted mean
@@ -229,6 +220,7 @@ districts %>%
   # slice_max(alg_dif, n = 1)
   select(system_name, alg_diff, alg_1, alg_2)
 ```
+
 15. cont - For what percentage of schools is it true that alg_2 is larger than alg_1?
 
 > 18 schools (out of 145), so 12.4% (i got this simply by filtering where alg_2 > alg_1); or 15.3% if removed NA
@@ -274,6 +266,7 @@ districts %>%
 #  filter(nancount >= 5) %>% 
 #  arrange(desc(nancount))
 ```
+
 16. cont - What do you notice about schools that have a lot of missing values?
 
 > first looked at how many schools have which data missing. Most schools (112) don't have any missing, and an additional 13 have only 1 or two values missing. From there, the next one has 6 missing and going up from there. I decided to inspect all schools with 6 or more values missing.
@@ -285,8 +278,7 @@ districts %>%
   mutate(count_na = apply(., 1, count_na_func)) %>% 
   group_by(count_na) %>% 
   summarize(n())
-```
-```{r}
+
 districts %>% 
   mutate(count_na = apply(., 1, count_na_func)) %>% 
   filter(count_na >= 6)
@@ -320,6 +312,7 @@ districts %>%
 19. Create a linear regression model using lm with target variable grad and predictor variable suspended. What R\^2 value does this model have? What is the interpretation of this number?
 
 > the R squared is 0.0722, very close to 0, so the linear fit does not match up to the data well, lot of variability
+
 > anova also tells us that the P-value is low, 0.001262 and therefore it's better to predict with one variable than with none (with constant), so it's statistically significant
 
 ```{r}
@@ -329,7 +322,7 @@ anova(simple_linear)
 summary(simple_linear)
 ```
 
-note: there is one extreme value outlier (low grad rate AND low suspension rate ), TN school for blind. If we remove it, the numbers improve significantly, and the coefficients are different.
+> note: there is one extreme value outlier (low grad rate AND low suspension rate ), TN school for blind. If we remove it, the numbers improve significantly, and the coefficients are different.
 
 ```{r}
 grad_lm <- districts %>% 
@@ -385,9 +378,7 @@ school_algebra_below20 <- school_testing %>%
   filter(subject == 'Algebra I' & grade == 'All Grades' & subgroup == 'All Students') %>% 
   filter(pct_bsc_and_below >= 20) %>% 
   select(school_name)
-```
 
-```{r}
 school_algebra_below20 %>% 
   left_join(school_testing, by='school_name') %>% 
   filter(subject == 'English I' & grade == 'All Grades' & subgroup == 'All Students') %>% 
